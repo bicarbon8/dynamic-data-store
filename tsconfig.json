@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        /* Basic Options */
+        "outDir": "dist",
+        "target": "es6",
+        "module": "commonjs",
+        "lib": ["es5", "DOM", "ScriptHost", "es2018.promise", "ES2020"],
+        "sourceMap": true,
+
+        /* Module Resolution Options */
+        "moduleResolution": "node",
+
+        /* Advanced Options */
+        "resolveJsonModule": true,
+        "noEmit": false,
+        "declaration": true,
+        "skipLibCheck": true,
+        "noImplicitOverride": true
+    },
+    "include": ["src", "test"]
+}
