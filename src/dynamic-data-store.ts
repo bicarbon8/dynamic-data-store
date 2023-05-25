@@ -1,9 +1,11 @@
+import { ValueMatcher } from "./value-matcher";
+
 export type DynamicDataStoreOptions<T extends {}> = {
     /**
      * an array of property keys in `T` whose values will be used to generate
      * a unique record index for each record added to the `DynamicDataStore`
      */
-    indexPropertyKeys?: Array<keyof T>;
+    indicies?: Array<keyof T>;
     /**
      * an optional array of records to add on creation of the `DynamicDataStore`; 
      * alternatively you can use the `add(record: T)` function after creation
@@ -13,21 +15,24 @@ export type DynamicDataStoreOptions<T extends {}> = {
      * an optional string to use to separate the property values when generating
      * a unique key to index the `DynamicDataStore`
      */
-    propertyKeyDelimiter?: string;
+    delimiter?: string;
 };
 
+export type QueryValue = ValueMatcher | number | boolean | string | {};
+export type Query<T> = Partial<Record<keyof T, QueryValue>>;
+
 export class DynamicDataStore<T extends {}> {
-    private readonly _indexPropKeys: Array<keyof T>;
+    private readonly _indicies: Array<keyof T>;
     private readonly _store = new Map<string, T>();
-    private readonly _propDelim: string;
+    private readonly _delim: string;
     
     constructor(options?: DynamicDataStoreOptions<T>) {
         options = {
-            propertyKeyDelimiter: '-',
+            delimiter: '-',
             ...options
         };
-        this._propDelim = options.propertyKeyDelimiter;
-        this._indexPropKeys = [...(options.indexPropertyKeys ?? [])];
+        this._delim = options.delimiter;
+        this._indicies = [...(options.indicies ?? [])];
         if (options.records) {
             for (let record of options.records) {
                 this.add(record);
@@ -39,8 +44,8 @@ export class DynamicDataStore<T extends {}> {
      * a readonly array of the property keys used to generate the index
      * for this `DynamicDataStore`
      */
-    get indexPropertyKeys(): Array<keyof T> {
-        return [...this._indexPropKeys];
+    get indicies(): Array<keyof T> {
+        return [...this._indicies];
     }
 
     /**
@@ -65,19 +70,19 @@ export class DynamicDataStore<T extends {}> {
      * and the fields used as index properties
      * @param updated an object containing the values to update on one or more stored
      * records
-     * @param queries optional `Partial<T>` object(s) containing one or more fields
-     * used to determine which records are updated (must match all values specified).
+     * @param query optional `Query<T>` object containing one or more fields
+     * used to determine which records should be updated (must match all values specified).
      * if not supplied then the `updated` object will be used to `get` a matching
      * record from the `DynamicDataStore` by generating an index from the object's 
      * properties that match the specified index property keys
      * @returns the number of records updated
      */
-    update(updated: Partial<T>, ...queries: Array<Partial<T>>): number {
+    update(updated: Partial<T>, query?: Query<T>): number {
         let count = 0;
         if (updated) {
             let oldRecords: Array<T>;
-            if (queries?.length) {
-                oldRecords = this.select(...queries);
+            if (query) {
+                oldRecords = this.select(query);
             } else {
                 oldRecords = [this.get(updated)];
             }
@@ -98,34 +103,34 @@ export class DynamicDataStore<T extends {}> {
     }
 
     /**
-     * finds all objects containing matching values for the supplied
-     * fields in `partial`. if multiple `queries` are supplied then each
-     * is applied as an `OR` operation with the others
-     * @param queries optional objects containing one or more fields in type `T`
-     * used to filter the results. returned results must match all values specified
-     * in the individual query
-     * @returns an array of objects containing matching values for all
-     * fields supplied in `queries` or all objects if `queries` is not supplied
+     * finds all records in the `DynamicDataStore` whose values match those
+     * passed in the supplied record. NOTE: any properties not specified will
+     * be ignored
+     * @param query a record object where any keys of type `T` are set to either 
+     * the exact value expected or a `ValueMatcher` used to identify values
+     * conforming to certain criteria
+     * @returns an array of all matching records
      */
-    select(...queries: Array<Partial<T>>): Array<T> {
+    select(query?: Query<T>): Array<T> {
         const results = new Array<T>();
-        if (queries?.length && queries[0]) {
-            for (const query of queries) {
-                if (query) {
-                    const findByKeys = Object.keys(query);
-                    const uArr = Array.from(this._store.values());
-                    results.splice(results.length, 0, ...uArr.filter(u => {
-                        for (const key of findByKeys) {
-                            if (query[key] !== u[key]) {
-                                return false;
-                            }
+        if (query) {
+            const sArr = Array.from(this._store.values());
+            const queryKeys = Object.keys(query);
+            results.splice(0, 0, ...sArr.filter(r => {
+                for (let prop of queryKeys) {
+                    if (query[prop] instanceof ValueMatcher) {
+                        if (!query[prop].isMatch(r[prop])) {
+                            return false;
                         }
-                        return true;
-                    }));
+                    } else {
+                        if (query[prop] !== r[prop]) {
+                            return false;
+                        }
+                    }
                 }
-            }
+                return true;
+            }));
         } else {
-            // return all records in the table
             results.splice(0, 0, ...this._store.values());
         }
         return JSON.parse(JSON.stringify(results));
@@ -133,22 +138,22 @@ export class DynamicDataStore<T extends {}> {
 
     /**
      * finds the first object containing matching values for the supplied fields
-     * in `partial`
-     * @param partial an optional object containing one or more fields in type `T`
+     * in `query`
+     * @param query an optional object containing one or more fields in type `T`
      * @returns the first non-null (and non-undefined) object matching values
-     * for all fields supplied in `partial`
+     * for all fields supplied in `query`
      */
-    selectFirst(partial?: Partial<T>): T {
-        const results = this.select(partial);
+    selectFirst(query?: Query<T>): T {
+        const results = this.select(query);
         return results.find(r => r != null);
     }
 
     /**
-     * gets the object contained in the `DynamicDataStore` whose index keys match
-     * those supplied in `containsIndexProps`
+     * gets the object contained in the `DynamicDataStore` whose index property
+     * values match those supplied in the passed in object
      * @param containsIndexProps an object containing all properties used
-     * as index keys
-     * @returns a single object matching the supplied index keys or
+     * as index properties
+     * @returns a single object matching the supplied index properties or
      * `undefined` if none exist or the passed in object does not contain all the
      * expected index properties
      */
@@ -165,13 +170,13 @@ export class DynamicDataStore<T extends {}> {
 
     /**
      * returns the number of records matching the specified selection
-     * criteria passed in `partial`
-     * @param partial an optional object containing one or more properties in type `T`
-     * @returns the number of records found that match the passed in `partial` or
-     * all records if no `partial` is supplied
+     * criteria passed in `query`
+     * @param query an optional object containing one or more properties in type `T`
+     * @returns the number of records found that match the passed in `query` or
+     * all records if no `query` is supplied
      */
-    count(partial?: Partial<T>): number {
-        const records = this.select(partial);
+    count(query?: Query<T>): number {
+        const records = this.select(query);
         return records.length;
     }
 
@@ -180,13 +185,13 @@ export class DynamicDataStore<T extends {}> {
      * values of the supplied `queries` object(s). where more than one `queries`
      * object is supplied each is assumed to be combined using a logical `OR`
      * operation
-     * @param queries the object whose property values are used to lookup
+     * @param query the object whose property values are used to lookup
      * existing records for deletion
      * @returns and array of records that were deleted or empty array
      * if no matches found
      */
-    delete(...queries: Array<Partial<T>>): Array<T> {
-        const found = this.select(...queries);
+    delete(query: Query<T>): Array<T> {
+        const found = this.select(query);
         for (let f of found) {
             let key = this.getIndex(f);
             if (key) {
@@ -217,7 +222,7 @@ export class DynamicDataStore<T extends {}> {
      */
     hasIndexProperties(record: Partial<T>): boolean {
         let hasProps: boolean = true;
-        for (const key of this._indexPropKeys) {
+        for (const key of this._indicies) {
             if (record?.[key] == null) {
                 hasProps = false;
                 break;
@@ -237,14 +242,14 @@ export class DynamicDataStore<T extends {}> {
     getIndex(record: Partial<T>): string {
         if (this.hasIndexProperties(record)) {
             const strVals = new Array<string>();
-            if (this._indexPropKeys.length) {
-                for (let key of this._indexPropKeys) {
+            if (this._indicies.length) {
+                for (let key of this._indicies) {
                     strVals.push(JSON.stringify(record[key]));
                 }
             } else {
                 strVals.push(JSON.stringify(record));
             }
-            return strVals.join(this._propDelim);
+            return strVals.join(this._delim);
         }
         return undefined;
     }
@@ -258,10 +263,10 @@ export class DynamicDataStore<T extends {}> {
      */
     parseIndex(index: string): Partial<T> {
         const parsed: Partial<T> = {};
-        const values = index.split(this._propDelim);
-        if (values.length === this._indexPropKeys.length) {
-            for (var i=0; i<this._indexPropKeys.length; i++) {
-                let key = this._indexPropKeys[i];
+        const values = index.split(this._delim);
+        if (values.length === this._indicies.length) {
+            for (var i=0; i<this._indicies.length; i++) {
+                let key = this._indicies[i];
                 let val = values[i];
                 parsed[key] = JSON.parse(val);
             }

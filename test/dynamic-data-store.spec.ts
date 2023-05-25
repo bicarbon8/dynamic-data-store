@@ -1,4 +1,5 @@
 import { DynamicDataStore } from "../src";
+import { between, containing, matching } from "../src/value-matcher";
 
 type TestObj = {
     strKey?: string;
@@ -26,7 +27,7 @@ describe('DynamicDataStore', () => {
 
     it('can add indexKeys via contructor options', () => {
         const dt = new DynamicDataStore<TestObj>({
-            indexPropertyKeys: ['boolKey']
+            indicies: ['boolKey']
         });
 
         const actualKey = dt.getIndex({ strKey: 'foo', boolKey: true, numKey: 10 });
@@ -35,8 +36,8 @@ describe('DynamicDataStore', () => {
 
     it('can add key delimiter via contructor options', () => {
         const dt = new DynamicDataStore<TestObj>({
-            propertyKeyDelimiter: ':',
-            indexPropertyKeys: ['strKey', 'numKey']
+            delimiter: ':',
+            indicies: ['strKey', 'numKey']
         });
 
         const actualKey = dt.getIndex({ strKey: 'foo', boolKey: false, numKey: 111 });
@@ -45,7 +46,7 @@ describe('DynamicDataStore', () => {
 
     it('does not update source table if returned record is modified', () => {
         const dt = new DynamicDataStore<TestObj>({
-            indexPropertyKeys: ['strKey'],
+            indicies: ['strKey'],
             records: [
                 { strKey: 'foo', boolKey: true, numKey: 222 }
             ]
@@ -63,7 +64,7 @@ describe('DynamicDataStore', () => {
 
     it('can update record using the update function', () => {
         const dt = new DynamicDataStore<TestObj>({
-            indexPropertyKeys: ['strKey', 'numKey'],
+            indicies: ['strKey', 'numKey'],
             records: [
                 {strKey: 'foo', boolKey: true, numKey: 1},
                 {strKey: 'foo', boolKey: true, numKey: 2},
@@ -82,7 +83,7 @@ describe('DynamicDataStore', () => {
 
     it('can update multiple records using the update function', () => {
         const dt = new DynamicDataStore<TestObj>({
-            indexPropertyKeys: ['strKey', 'numKey'],
+            indicies: ['strKey', 'numKey'],
             records: [
                 {strKey: 'foo', boolKey: true, numKey: 1},
                 {strKey: 'foo', boolKey: false, numKey: 2},
@@ -90,12 +91,12 @@ describe('DynamicDataStore', () => {
                 {strKey: 'foo', boolKey: false, numKey: 4}
             ]
         });
-        const count = dt.update({boolKey: true}, {numKey: 2}, {numKey: 3});
+        const count = dt.update({boolKey: true}, {numKey: between(2, 3)});
 
         expect(count).withContext('only two records updated').toBe(2);
         const unchanged = dt.selectFirst({strKey: 'foo', numKey: 4});
         expect(unchanged.boolKey).toBe(false);
-        const updated = dt.select({numKey: 2}, {numKey: 3});
+        const updated = dt.select({numKey: between(2, 3)});
         expect(updated.length).toBe(2);
         expect(updated.every(c => c.boolKey === true)).toBe(true);
     })
@@ -118,7 +119,7 @@ describe('DynamicDataStore', () => {
         expect(deleted.length).withContext('expected two records removed based on criteria').toBe(2);
         expect(deleted.filter(d => d.numKey === 1).length).toBe(1);
 
-        const remaining = dt.delete({strKey: 'foo'}, {strKey: 'bar'});
+        const remaining = dt.delete({strKey: matching(/(foo|bar)/)});
         expect(remaining.length).toBe(6);
         expect(dt.count()).toBe(0);
     })
@@ -144,16 +145,16 @@ describe('DynamicDataStore', () => {
 
     it('does not allow the indexProperties array to be modified', () => {
         const dt = new DynamicDataStore<TestObj>({
-            indexPropertyKeys: ['strKey', 'numKey']
+            indicies: ['strKey', 'numKey']
         });
 
-        const indexProps = [...dt.indexPropertyKeys];
+        const indexProps = [...dt.indicies];
         
         expect(indexProps.length).toBe(2);
 
-        dt.indexPropertyKeys.splice(0, 1);
+        dt.indicies.splice(0, 1);
 
-        expect(dt.indexPropertyKeys.length).toBe(2);
-        expect(dt.indexPropertyKeys).toEqual(indexProps);
+        expect(dt.indicies.length).toBe(2);
+        expect(dt.indicies).toEqual(indexProps);
     })
 })
