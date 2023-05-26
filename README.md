@@ -11,7 +11,82 @@ a no-sql data storage solution supporting dynamic primary key designation and ha
 
 ## Examples
 
-### 1. Client-Server user management
+### 1. CRUD operations
+the following examples assume a `DynamicDataStore` named `store` already exists with the following configuration:
+```typescript
+type Data = {username: string; firstname?: string; lastname?: string; address?: string; created: number; lastUpdated: number; active: boolean;}
+const store = new DynamicDataStore<Data>({indicies: ['username','active']});
+```
+Creating new records is done using the `add` function that accepts a single object:
+```typescript
+const successful = store.add({
+    username: 'secretagent1',
+    firstname: 'John',
+    created: Date.now(),
+    lastUpdated: Date.now(),
+    active: true
+}); // record added
+const unsuccessful = store.add({
+    username: 'secretagent1',
+    created: Date.now(),
+    lastUpdated: Date.now(),
+    active: true
+}); // record not added to to unique index violation
+```
+Reading records from the `DynamicDataStore` is done using the `select` or `selectFirst` function when you want records matching certain constraints:
+```typescript
+const allActiveRecords = store.select({
+    active: true
+}); // an array of 0 to many records
+const firstActiveRecordCreatedBeforeTimestamp = store.selectFirst({
+    active: true,
+    created: lessThan(timestampMilliseconds)
+}); // a single record or undefined if no matching records
+```
+or using the `get` function if you know the values for the record's indicies:
+```typescript
+const record = store.get({
+    username: 'secretagent1',
+    active: true
+}); // returns {username: 'secretagent1', firstname: 'John', created: 1234567890, lastUpdated: 1234567890, active: true}
+const undef = store.get({
+    firstname: 'Jonh'
+}); // returns undefined
+```
+Updating records is done using the `update` function which can be used to update a single record if your `updates` object contains values for the properties used as indicies:
+```typescript
+const updatedCount = store.update({
+    username: 'secretagent1',
+    active: true,
+    lastname: 'Smith',
+    lastUpdated: Date.now()
+}); // updatedCount equals 1
+```
+or multiple records if your `updates` object does NOT contain values for the properties used as indices:
+```typescript
+const count = store.update({
+    lastname: null
+}); // sets lastname to null for all records
+```
+and you can optionally pass in a `query` parameter after the `updates` object to filter the records that will be udpated:
+```typescript
+const count = store.update({
+    address: '234 New Address, City, A4445556'
+}, {
+    firstname: 'John',
+    lastname: 'Smith'
+}); // all users named 'John Smith' will have their address updated
+```
+> NOTE: it **IS** possible to update values of one or more properties used as indicies as long as not all properties are specified in the `updates` object, but this may have unexpected results such as overwriting other records because now index keys overlap. in such cases the updated record(s) will take precedence in overwriting the pre-existing record(s)
+
+Deleting records is done using the `delete` function and passing in a `query` record that filters the number of records to be deleted:
+```typescript
+const deletedRecords = store.delete({
+    lastActive: lessThan(timestampMilliseconds)
+}); // deletedRecords contains an array of all deleted records
+```
+
+### 2. Client-Server user management
 assuming you have a chat application where users are **NOT** required to log-in, but instead use a machine-generated fingerprint and a user-generated name to uniquely identify themselves and they need to be able to reconnect to a socket if there is a temporary disconnect as well as ensure no other users are using the same username at the same time...
 ```typescript
 // client

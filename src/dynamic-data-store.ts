@@ -68,7 +68,7 @@ export class DynamicDataStore<T extends {}> {
      * updates an existing object in the `DynamicDataStore` with new values for
      * all fields that have changed, preserving any unchanged fields
      * and the fields used as index properties
-     * @param updated an object containing the values to update on one or more stored
+     * @param updates an object containing the values to update on one or more stored
      * records
      * @param query optional `Query<T>` object containing one or more fields
      * used to determine which records should be updated (must match all values specified).
@@ -77,25 +77,23 @@ export class DynamicDataStore<T extends {}> {
      * properties that match the specified index property keys
      * @returns the number of records updated
      */
-    update(updated: Partial<T>, query?: Query<T>): number {
+    update(updates: Partial<T>, query?: Query<T>): number {
         let count = 0;
-        if (updated) {
-            let oldRecords: Array<T>;
-            if (query) {
-                oldRecords = this.select(query);
+        if (updates) {
+            const shouldBeUpdatedArr = new Array<T>();
+            if (this.hasAllIndexProperties(updates)) {
+                shouldBeUpdatedArr.splice(0, 0, this.get(updates));
             } else {
-                oldRecords = [this.get(updated)];
+                shouldBeUpdatedArr.splice(0, 0, ...this.select(query));
             }
-            if (oldRecords?.length) {
-                for (const oldRecord of oldRecords) {
-                    let key = this.getIndex(oldRecord);
-                    if (key) {
-                        this._store.set(key, {
-                            ...oldRecord,
-                            ...updated
-                        });
-                        count++;
-                    }
+            for (let toBeUpdated of shouldBeUpdatedArr) {
+                let key = this.getIndex(toBeUpdated);
+                if (key) {
+                    this._store.set(key, {
+                        ...toBeUpdated,
+                        ...updates
+                    });
+                    count++;
                 }
             }
         }
@@ -220,7 +218,7 @@ export class DynamicDataStore<T extends {}> {
      * @returns `true` if all the properties used as index keys have a value,
      * otherwise `false`
      */
-    hasIndexProperties(record: Partial<T>): boolean {
+    hasAllIndexProperties(record: Partial<T>): boolean {
         let hasProps: boolean = true;
         for (const key of this._indicies) {
             if (record?.[key] == null) {
@@ -240,7 +238,7 @@ export class DynamicDataStore<T extends {}> {
      * @returns the generated index key
      */
     getIndex(record: Partial<T>): string {
-        if (this.hasIndexProperties(record)) {
+        if (this.hasAllIndexProperties(record)) {
             const strVals = new Array<string>();
             if (this._indicies.length) {
                 for (let key of this._indicies) {
