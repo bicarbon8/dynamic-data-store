@@ -1,0 +1,30 @@
+name: build-test-pullrequest
+on: 
+  pull_request:
+    branches:
+    - main
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - name: Install Dependencies
+        id: installdeps
+        run: npm ci
+      - name: Build Projects
+        id: buildproj
+        run: npm run build
+      - name: Run Unit Tests
+        id: unittest
+        run: npm run test
+      - name: Functional Test
+        # only run functional tests on internal PRs
+        if: github.repository == 'bicarbon8/automated-functional-testing'
+        id: functionaltest
+        run: npm run test:examples
+        env:
+          browserstack_user: ${{ secrets.BROWSERSTACK_USER }}
+          browserstack_key: ${{ secrets.BROWSERSTACK_KEY }}
