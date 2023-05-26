@@ -1,4 +1,4 @@
-import { between, containing, greaterThan, matching } from "../src/value-matcher";
+import { between, containing, greaterThan, lessThan, matching } from "../src/value-matcher";
 
 describe('ValueMatcher', () => {
     describe('Between', () => {
@@ -65,6 +65,38 @@ describe('ValueMatcher', () => {
         })
     })
 
+    describe('LessThan', () => {
+        const testData = [
+            {max: null, actual: 0, expected: true, ctx: 'max defaults to Infinity'},
+            {max: 0, actual: 0, expected: false, ctx: 'actual value can NOT be equal to max'},
+            {max: 3, actual: 1, expected: true, ctx: 'number less than positive max'},
+            {max: -3, actual: -10, expected: true, ctx: 'number less than negative max'},
+            {max: 1, actual: 0, expected: true, ctx: 'zero number less than positive max'},
+            {max: 1, actual: -1, expected: true, ctx: 'negative number less than positive max'},
+            {max: 1, actual: 11, expected: false, ctx: 'positive number greater than positive max'},
+            {max: -10, actual: 0, expected: false, ctx: 'zero number greater than negative max'},
+            {max: -10, actual: 1, expected: false, ctx: 'positive number greater than negative max'},
+            {max: -10, actual: -3, expected: false, ctx: 'negative number greater than negative max'},
+            {max: 3, actual: ['foo', 'bar'], expected: true, ctx: 'array actual will compare length to max for positive case'},
+            {max: 1, actual: ['foo', 'bar'], expected: false, ctx: 'array actual will compare length to max for negative case'},
+            {max: 3, actual: new Set(['foo', 'bar']), expected: true, ctx: 'Set or Map actual will compare size to max for positive case'},
+            {max: 1, actual: new Set(['foo', 'bar']), expected: false, ctx: 'Set or Map actual will compare size to max for negative case'},
+            {max: 4, actual: '3', expected: true, ctx: 'string actual containing number is compared as number for positive case'},
+            {max: -11, actual: '-10', expected: false, ctx: 'string actual containing number is compared as number for negative case'},
+            {max: 20, actual: 'hello world!', expected: true, ctx: 'string actual NOT containing number is compared by length for positive case'},
+            {max: 5, actual: 'hello world!', expected: false, ctx: 'string actual NOT containing number is compared by length for negative case'},
+            {max: 2, actual: true, expected: true, ctx: 'boolean actual converted to number for positive case'},
+            {max: 0, actual: false, expected: false, ctx: 'boolean actual converted to number for negative case'}
+        ];
+        testData.forEach(d => {
+            it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
+                expect(lessThan(d.max).isMatch(d.actual))
+                    .withContext(d.ctx)
+                    .toBe(d.expected);
+            })
+        })
+    })
+
     describe('Containing', () => {
         const testData = [
             {input: null, actual: 'abc123', expected: true, ctx: 'null input defaults to empty string comparison'},
@@ -89,10 +121,13 @@ describe('ValueMatcher', () => {
     describe('Matching', () => {
         const testData = [
             {input: null, actual: 'abc123', expected: true, ctx: 'null input defaults to match all'},
-            {input: /[0-9]+/, actual: 42, expected: true, ctx: 'works with numeric actual'},
+            {input: /[0-9]+/, actual: 42, expected: true, ctx: 'works with numeric actual for positive case'},
+            {input: /[0-3]+/, actual: 45, expected: false, ctx: 'works with numeric actual for negative case'},
             {input: /(T|t)(rue)/, actual: true, expected: true, ctx: 'works with boolean actual'},
-            {input: /(hello)/, actual: 'hello world', expected: true, ctx: 'works with string actual'},
-            {input: /(a|b|c)/, actual: ['a', 'b', 'c'], expected: true, ctx: 'works with array actual'}
+            {input: /(hello)/, actual: 'hello world', expected: true, ctx: 'works with string actual for positive case'},
+            {input: /(hello)/, actual: 'hell world', expected: false, ctx: 'works with string actual for negative case'},
+            {input: /(a|b|c)/, actual: ['a', 'b', 'c'], expected: true, ctx: 'works with array actual for positive case'},
+            {input: /(d|e|f)/, actual: ['a', 'b', 'c'], expected: false, ctx: 'works with array actual for negative case'}
         ];
         testData.forEach(d => {
             it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
