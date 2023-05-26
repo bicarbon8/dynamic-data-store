@@ -2,7 +2,7 @@ export class ValueMatcher {
     isMatch(actual?: unknown): boolean { return false; }
 }
 
-class NumberBetween extends ValueMatcher {
+class Between extends ValueMatcher {
     public readonly min: number;
     public readonly max: number;
     constructor(min?: number, max?: number) {
@@ -12,15 +12,29 @@ class NumberBetween extends ValueMatcher {
     }
     override isMatch(actual?: unknown): boolean {
         if (actual != null) {
-            const anum = Number(actual);
-            if (!isNaN(anum)) {
-                return this.min <= anum && anum <= this.max;
+            if (typeof actual === 'number' || typeof actual === 'string' || typeof actual === 'boolean') {
+                const anum = Number(actual);
+                if (!isNaN(anum)) {
+                    return this.min <= anum && anum <= this.max;
+                }
+            }
+            if (typeof actual === 'string') {
+                const length = String(actual).length;
+                return this.min <= length && length <= this.max;
+            }
+            if (Array.isArray(actual)) {
+                const length = actual.length;
+                return this.min <= length && length <= this.max;
+            }
+            if (actual instanceof Map || actual instanceof Set) {
+                const size = (actual as Map<any, any> | Set<any>).size;
+                return this.min <= size && size <= this.max;
             }
         }
         return false;
     }
 }
-export const between = (min?: number, max?: number) => new NumberBetween(min, max);
+export const between = (min?: number, max?: number) => new Between(min, max);
 
 class GreaterThan extends ValueMatcher {
     public readonly min: number;
@@ -30,9 +44,23 @@ class GreaterThan extends ValueMatcher {
     }
     override isMatch(actual?: unknown): boolean {
         if (actual != null) {
-            const anum = Number(actual);
-            if (!isNaN(anum)) {
-                return this.min < anum;
+            if (typeof actual === 'number' || typeof actual === 'string' || typeof actual === 'boolean') {
+                const anum = Number(actual);
+                if (!isNaN(anum)) {
+                    return this.min < anum;
+                }
+            }
+            if (typeof actual === 'string') {
+                const length = String(actual).length;
+                return this.min < length;
+            }
+            if (Array.isArray(actual)) {
+                const length = actual.length;
+                return this.min < length;
+            }
+            if (actual instanceof Map || actual instanceof Set) {
+                const size = (actual as Map<any, any> | Set<any>).size;
+                return this.min < size;
             }
         }
         return false;
@@ -48,9 +76,23 @@ class LessThan extends ValueMatcher {
     }
     override isMatch(actual?: unknown): boolean {
         if (actual != null) {
-            const anum = Number(actual);
-            if (!isNaN(anum)) {
-                return anum < this.max;
+            if (typeof actual === 'number' || typeof actual === 'string' || typeof actual === 'boolean') {
+                const anum = Number(actual);
+                if (!isNaN(anum)) {
+                    return anum < this.max;
+                }
+            }
+            if (typeof actual === 'string') {
+                const length = String(actual).length;
+                return length < this.max;
+            }
+            if (Array.isArray(actual)) {
+                const length = actual.length;
+                return length < this.max;
+            }
+            if (actual instanceof Map || actual instanceof Set) {
+                const size = (actual as Map<any, any> | Set<any>).size;
+                return size < this.max;
             }
         }
         return false;
@@ -71,12 +113,31 @@ class Containing extends ValueMatcher {
                 return actual - this.expected >= 0;
             }
             if (typeof actual === 'string') {
-                // does actual string contain expected string?
-                return actual.includes(String(this.expected));
+                if (typeof this.expected === 'string' || typeof this.expected === 'number' || typeof this.expected === 'boolean') {
+                    // does actual string contain expected string?
+                    return actual.includes(String(this.expected));
+                }
+                if (Array.isArray(this.expected)) {
+                    for (let val of this.expected) {
+                        if (!actual.includes(String(val))) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
             }
             if (Array.isArray(actual)) {
-                // does actual array contain element expected?
-                return actual.includes(this.expected);
+                if (Array.isArray(this.expected)) {
+                    for (let val of this.expected) {
+                        if (!actual.includes(val)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                } else {
+                    // does actual array contain element expected?
+                    return actual.includes(this.expected);
+                }
             }
             if (actual instanceof Map || actual instanceof Set) {
                 // does actual map / set contain expected entry?
