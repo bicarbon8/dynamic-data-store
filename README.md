@@ -31,7 +31,7 @@ const unsuccessful = store.add({
     created: Date.now(),
     lastUpdated: Date.now(),
     active: true
-}); // record not added to to unique index violation
+}); // record not added due to unique index violation
 ```
 Reading records from the `DynamicDataStore` is done using the `select` or `selectFirst` function when you want records matching certain constraints:
 ```typescript

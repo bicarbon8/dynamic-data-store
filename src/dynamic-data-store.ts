@@ -135,38 +135,6 @@ export class DynamicDataStore<T extends {}> {
     }
 
     /**
-     * finds the first object containing matching values for the supplied fields
-     * in `query`
-     * @param query an optional object containing one or more fields in type `T`
-     * @returns the first non-null (and non-undefined) object matching values
-     * for all fields supplied in `query`
-     */
-    selectFirst(query?: Query<T>): T {
-        const results = this.select(query);
-        return results.find(r => r != null);
-    }
-
-    /**
-     * gets the object contained in the `DynamicDataStore` whose index property
-     * values match those supplied in the passed in object
-     * @param containsIndexProps an object containing all properties used
-     * as index properties
-     * @returns a single object matching the supplied index properties or
-     * `undefined` if none exist or the passed in object does not contain all the
-     * expected index properties
-     */
-    get(containsIndexProps: Partial<T>): T {
-        const key = this.getIndex(containsIndexProps);
-        if (key) {
-            const record = this._store.get(key);
-            if (record) {
-                return JSON.parse(JSON.stringify(record));
-            }
-        }
-        return undefined;
-    }
-
-    /**
      * returns the number of records matching the specified selection
      * criteria passed in `query`
      * @param query an optional object containing one or more properties in type `T`
