@@ -1,3 +1,8 @@
+/**
+ * base class that should be extended to create a custom matcher.
+ * NOTE: will always return `false` from `isMatch` so overriding
+ * in a sub-class is necessary to actually function
+ */
 export class ValueMatcher {
     isMatch(actual?: unknown): boolean { return false; }
 }
@@ -34,6 +39,16 @@ class Between extends ValueMatcher {
         return false;
     }
 }
+/**
+ * compares the `actual` value passed to `isMatch` with the `min` and `max` values where an
+ * `actual` that is a number or a string representation of a number is compared directly (boolean values
+ * are converted to 1 or 0), and `actual` values that are a string or collection are compared by length
+ * or number of contained items
+ * @param min the minimum value that will return `true` from the `isMatch` function. @default -Infinity
+ * @param max the maximum value that will return `true` from the `isMatch` function. @default Infinity
+ * @returns `true` if the value passed to `isMatch` is between or equal to the `min`
+ * and `max` values; otherwise `false`
+ */
 export const between = (min?: number, max?: number) => new Between(min, max);
 
 class GreaterThan extends ValueMatcher {
@@ -66,6 +81,15 @@ class GreaterThan extends ValueMatcher {
         return false;
     }
 }
+/**
+ * compares the `actual` value passed to `isMatch` with the `min` value where an
+ * `actual` that is a number or a string representation of a number is compared directly (boolean values
+ * are converted to 1 or 0), and `actual` values that are a string or collection are compared by length
+ * or number of contained items
+ * @param min the minimum value that will return `true` from the `isMatch` function. @default -Infinity
+ * @returns `true` if the value passed to `isMatch` is greater than the `min`
+ * value; otherwise `false`
+ */
 export const greaterThan = (min?: number) => new GreaterThan(min);
 
 class LessThan extends ValueMatcher {
@@ -98,6 +122,15 @@ class LessThan extends ValueMatcher {
         return false;
     }
 }
+/**
+ * compares the `actual` value passed to `isMatch` with the `max` value where an
+ * `actual` that is a number or a string representation of a number is compared directly (boolean values
+ * are converted to 1 or 0), and `actual` values that are a string or collection are compared by length
+ * or number of contained items
+ * @param max the maximum value that will return `true` from the `isMatch` function. @default Infinity
+ * @returns `true` if the value passed to `isMatch` is less than the `max`
+ * value; otherwise `false`
+ */
 export const lessThan = (max?: number) => new LessThan(max);
 
 class Containing extends ValueMatcher {
@@ -140,8 +173,18 @@ class Containing extends ValueMatcher {
                 }
             }
             if (actual instanceof Map || actual instanceof Set) {
-                // does actual map / set contain expected entry?
-                return (actual as Map<any, any> | Set<any>).has(this.expected);
+                const arr = Array.from((actual as Map<any, any> | Set<any>).values());
+                if (Array.isArray(this.expected)) {
+                    for (let val of this.expected) {
+                        if (!arr.includes(val)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                } else {
+                    // does actual map / set contain expected entry?
+                    return arr.includes(this.expected);
+                }
             }
             if (typeof actual === 'object') {
                 return this._objectContains(actual);
@@ -170,6 +213,22 @@ class Containing extends ValueMatcher {
         return false;
     }
 }
+/**
+ * checks that the `actual` result contains the `expected` where the following rules apply:
+ * - **`actual` and `expected` are numeric:** if `actual` is a larger number than `expected` then `true` 
+ * - **`actual` is a `string`:**
+ *   - **`expected` is a `string`, `number` or `boolean`:** if `expected` value is contained in the `actual` string then `true`
+ *   - **`expected` is an array:** if all values in the `expected` array are contained in the `actual` string then `true`
+ * - **`actual` is an array:**
+ *   - **`expected` is an array:** if all values in the `expected` array are also in the `actual` array then `true`
+ *   - **`expected` is not an array:** if the `actual` array contains the `expected` value then `true`
+ * - **`actual` is a Set or Map:**
+ *   - **`expected` is an array:** if all values in the `expected` array are in the values of `actual` then `true`
+ *   - **`expected` is not an array:** if any of thethe `actual` values matches `expected` then `true`
+ * - **`actual` is some other `object`:** if any of the properties of `actual` contain a value matching `expected` then `true`
+ * @param expected a value you expect to be contained in the `actual` object passed to `isMatch`. @default ''
+ * @returns `true` if the `actual` contains the `expected`; otherwise `false`
+ */
 export const containing = (expected?: any) => new Containing(expected);
 
 class Matching extends ValueMatcher {
@@ -194,11 +253,19 @@ class Matching extends ValueMatcher {
         return false;
     }
 }
+/**
+ * compares the `regx` directly against the value passed to `isMatch` if that value
+ * is a `string`, `number` or `boolean`, but if it is an array, Set or Map then it
+ * compares the `regx` to all elements in the collection and only returns true if all
+ * match
+ * @param regx a `Regexp` used to compare to the `actual` value passed to `isMatch`
+ * @returns `true` if the `regx` matches `actual`
+ */
 export const matching = (regx?: RegExp) => new Matching(regx);
 
 class StartingWith extends ValueMatcher {
-    public readonly start: any;
-    constructor(start?: any) {
+    public readonly start: string | number | boolean;
+    constructor(start?: string | number | boolean) {
         super();
         this.start = start ?? '';
     }
@@ -221,4 +288,47 @@ class StartingWith extends ValueMatcher {
         return false;
     }
 }
-export const startingWith = (start?: string) => new StartingWith(start);
+/**
+ * performs a `string.startsWith` operation if `actual` is a `string`, `number` or `boolean` or
+ * if `actual` is an array, Set or Map it will check that `start` is the first value found in
+ * the collection
+ * @param start a `string`, `number` or `boolean` that is expected to be found at the beginning
+ * of the `actual` value @default ''
+ * @returns `true` if the `actual` value starts with `start`; otherwise `false`
+ */
+export const startingWith = (start?: string | number | boolean) => new StartingWith(start);
+
+class EndingWith extends ValueMatcher {
+    public readonly end: string | number | boolean;
+    constructor(end?: string | number | boolean) {
+        super();
+        this.end = end ?? '';
+    }
+    override isMatch(actual?: unknown): boolean {
+        if (actual != null) {
+            if (typeof actual === 'number' || typeof actual === 'string' || typeof actual === 'boolean') {
+                // does actual end with expected when both are converted to a string?
+                return String(actual).endsWith(String(this.end));
+            }
+            if (Array.isArray(actual)) {
+                // does actual array start with expected?
+                return actual.length > 0 && actual[actual.length - 1] === this.end;
+            }
+            if (actual instanceof Map || actual instanceof Set) {
+                // does actual map / set start with expected?
+                const arr = Array.from((actual as Map<any, any> | Set<any>).values());
+                return arr.length > 0 && arr[arr.length - 1] === this.end
+            }
+        }
+        return false;
+    }
+}
+/**
+ * performs a `string.endsWith` operation if `actual` is a `string`, `number` or `boolean` or
+ * if `actual` is an array, Set or Map it will check that `end` is the last value found in
+ * the collection
+ * @param end a `string`, `number` or `boolean` that is expected to be found at the end
+ * of the `actual` value @default ''
+ * @returns `true` if the `actual` value ends with `end`; otherwise `false`
+ */
+export const endingWith = (end?: string | number | boolean) => new EndingWith(end);

@@ -1,4 +1,4 @@
-import { between, containing, greaterThan, lessThan, matching } from "../src/value-matcher";
+import { between, containing, endingWith, greaterThan, lessThan, matching, startingWith } from "../src/value-matcher";
 
 describe('ValueMatcher', () => {
     describe('Between', () => {
@@ -109,7 +109,11 @@ describe('ValueMatcher', () => {
             {input: [42, 24], actual: [12, 42, 24, 99], expected: true, ctx: 'array input and array actual checks that all input values exist for positive case'},
             {input: [42], actual: [12, 24], expected: false, ctx: 'array input and array actual checks that all input values exist for negative case'},
             {input: ['foo', 'bar'], actual: 'foobarbaz', expected: true, ctx: 'array input and string actual checks that all input values exist for positive case'},
-            {input: ['foo', 'bar'], actual: 'barbaz', expected: false, ctx: 'array input and string actual checks that all input values exist for negative case'}
+            {input: ['foo', 'bar'], actual: 'barbaz', expected: false, ctx: 'array input and string actual checks that all input values exist for negative case'},
+            {input: 'foo', actual: new Set(['foo', 'bar']), expected: true, ctx: 'string input and Set or Map actual checks that input exists as value in actual for positive case'},
+            {input: 'foo', actual: new Set(['bar', 'baz']), expected: false, ctx: 'string input and Set or Map actual checks that input exists as value in actual for negative case'},
+            {input: ['foo', 'bar'], actual: new Set(['foo', 'bar']), expected: true, ctx: 'array input and Set or Map actual checks that each value in input exists as value in actual for positive case'},
+            {input: ['foo', 'bar'], actual: new Set(['bar', 'baz']), expected: false, ctx: 'array input and Set or Map actual checks that each value in input exists as value in actual for negative case'}
         ];
         testData.forEach(d => {
             it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
@@ -132,6 +136,46 @@ describe('ValueMatcher', () => {
         testData.forEach(d => {
             it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
                 expect(matching(d.input).isMatch(d.actual)).withContext(d.ctx).toBe(d.expected);
+            })
+        })
+    })
+
+    describe('StartingWith', () => {
+        const testData = [
+            {start: null, actual: 'abc123', expected: true, ctx: 'null start defaults to empty string'},
+            {start: 'abc', actual: 'abc123', expected: true, ctx: 'string start and string actual positive case'},
+            {start: '123', actual: 'abc123', expected: false, ctx: 'string start and string actual negative case'},
+            {start: 123, actual: '123abc', expected: true, ctx: 'number start and string actual positive case'},
+            {start: 123, actual: 'abc123', expected: false, ctx: 'number start and string actual negative case'},
+            {start: true, actual: 'true123', expected: true, ctx: 'boolean start and string actual positive case'},
+            {start: true, actual: '123true', expected: false, ctx: 'boolean start and string actual negative case'},
+            {start: 'foo', actual: ['foo', 'bar', 'baz'], expected: true, ctx: 'string start and array actual positive case'},
+            {start: 'bar', actual: ['foo', 'bar', 'baz'], expected: false, ctx: 'string start and array actual negative case'},
+            {start: '42', actual: [42, 24, 12], expected: false, ctx: 'numeric string start will not match with numeric array actual'}
+        ];
+        testData.forEach(d => {
+            it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
+                expect(startingWith(d.start).isMatch(d.actual)).withContext(d.ctx).toBe(d.expected);
+            })
+        })
+    })
+
+    describe('EndingWith', () => {
+        const testData = [
+            {end: null, actual: 'abc123', expected: true, ctx: 'null end defaults to empty string'},
+            {end: '123', actual: 'abc123', expected: true, ctx: 'string end and string actual positive case'},
+            {end: 'abc', actual: 'abc123', expected: false, ctx: 'string end and string actual negative case'},
+            {end: 123, actual: 'abc123', expected: true, ctx: 'number end and string actual positive case'},
+            {end: 123, actual: '123abc', expected: false, ctx: 'number end and string actual negative case'},
+            {end: true, actual: '123true', expected: true, ctx: 'boolean end and string actual positive case'},
+            {end: true, actual: 'true123', expected: false, ctx: 'boolean end and string actual negative case'},
+            {end: 'baz', actual: ['foo', 'bar', 'baz'], expected: true, ctx: 'string end and array actual positive case'},
+            {end: 'bar', actual: ['foo', 'bar', 'baz'], expected: false, ctx: 'string end and array actual negative case'},
+            {end: '12', actual: [42, 24, 12], expected: false, ctx: 'numeric string end will not match with numeric array actual'}
+        ];
+        testData.forEach(d => {
+            it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
+                expect(endingWith(d.end).isMatch(d.actual)).withContext(d.ctx).toBe(d.expected);
             })
         })
     })
