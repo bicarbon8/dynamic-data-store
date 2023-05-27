@@ -17,7 +17,7 @@ describe('DynamicDataStore', () => {
             ]
         });
 
-        expect(dt.count()).withContext('number of records in the table').toBe(2);
+        expect(dt.size()).withContext('number of records in the table').toBe(2);
         const actual = dt.select();
         expect(actual[0].strKey).toEqual('foo');
         expect(actual[0].boolKey).toBe(true);
@@ -51,12 +51,12 @@ describe('DynamicDataStore', () => {
                 { strKey: 'foo', boolKey: true, numKey: 222 }
             ]
         });
-        const record = dt.selectFirst();
+        const record = dt.select().first();
         record.strKey = 'bar';
         record.boolKey = false;
         record.numKey = 333;
 
-        const actual = dt.selectFirst();
+        const actual = dt.select().first();
         expect(actual.strKey).toEqual('foo');
         expect(actual.boolKey).toBe(true);
         expect(actual.numKey).toBe(222);
@@ -75,10 +75,10 @@ describe('DynamicDataStore', () => {
         const count = dt.update({strKey: 'foo', boolKey: false, numKey: 2});
 
         expect(count).withContext('only one record updated').toEqual(1);
-        const updated = dt.selectFirst({strKey: 'foo', numKey: 2});
+        const updated = dt.select({strKey: 'foo', numKey: 2}).first();
         expect(updated.boolKey).toBe(false);
         const unchanged = dt.select({boolKey: true});
-        expect(unchanged.length).toBe(3);
+        expect(unchanged.data.length).toBe(3);
     })
 
     it('can update multiple records using the update function', () => {
@@ -94,11 +94,11 @@ describe('DynamicDataStore', () => {
         const count = dt.update({boolKey: true}, {numKey: between(2, 3)});
 
         expect(count).withContext('only two records updated').toBe(2);
-        const unchanged = dt.selectFirst({strKey: 'foo', numKey: 4});
+        const unchanged = dt.select({strKey: 'foo', numKey: 4}).first();
         expect(unchanged.boolKey).toBe(false);
         const updated = dt.select({numKey: between(2, 3)});
-        expect(updated.length).toBe(2);
-        expect(updated.every(c => c.boolKey === true)).toBe(true);
+        expect(updated.data.length).toBe(2);
+        expect(updated.data.every(c => c.boolKey === true)).toBe(true);
     })
 
     it('can remove records by query data', () => {
@@ -121,7 +121,7 @@ describe('DynamicDataStore', () => {
 
         const remaining = dt.delete({strKey: matching(/(foo|bar)/)});
         expect(remaining.length).toBe(6);
-        expect(dt.count()).toBe(0);
+        expect(dt.size()).toBe(0);
     })
 
     it('can clear all records', () => {
@@ -138,9 +138,9 @@ describe('DynamicDataStore', () => {
             ]
         });
 
-        expect(dt.count()).toBe(8);
+        expect(dt.size()).toBe(8);
         dt.clear();
-        expect(dt.count()).toBe(0);
+        expect(dt.size()).toBe(0);
     })
 
     it('does not allow the indexProperties array to be modified', () => {

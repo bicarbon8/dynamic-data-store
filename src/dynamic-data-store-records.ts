@@ -1,3 +1,5 @@
+import { JsonHelper } from "./json-helper";
+
 export type Order = 'asc' | 'desc';
 
 export class DynamicDataStoreRecords<T extends {}> {
@@ -14,12 +16,12 @@ export class DynamicDataStoreRecords<T extends {}> {
             let bStr: string = '';
             if (keys?.length > 0) {
                 for (let key of keys) {
-                    aStr += (a?.[key] != null) ? JSON.stringify(a[key]) : this._highValueCharacters;
-                    bStr += (b?.[key] != null) ? JSON.stringify(b[key]) : this._highValueCharacters;
+                    aStr += (a?.[key] != null) ? JSON.stringify(a[key], JsonHelper.replacer) : this._highValueCharacters;
+                    bStr += (b?.[key] != null) ? JSON.stringify(b[key], JsonHelper.replacer) : this._highValueCharacters;
                 }
             } else {
-                aStr = (a != null) ? JSON.stringify(a) : this._highValueCharacters;
-                bStr = (b != null) ? JSON.stringify(b) : this._highValueCharacters;
+                aStr = (a != null) ? JSON.stringify(a, JsonHelper.replacer) : this._highValueCharacters;
+                bStr = (b != null) ? JSON.stringify(b, JsonHelper.replacer) : this._highValueCharacters;
             }
             if (aStr < bStr) {
                 if (order === 'asc') {
@@ -40,15 +42,23 @@ export class DynamicDataStoreRecords<T extends {}> {
         return this;
     }
 
-    count(val: number): T | Array<T> {
-        if (val === 0) {
-            return undefined;
+    count(val: number | string): Array<T> {
+        if (typeof val === 'number') {
+            if (val >= 0) {
+                return this.data.slice(0, val);
+            }
         }
-        if (val === 1) {
-            return (this.data.length > 0) ? this.data[0] : undefined;
+        if (val === '*') {
+            return this.data;
         }
-        if (val > 1 || val < 0) {
-            return this.data.slice(0, val);
-        }
+        return undefined;
+    }
+
+    first(): T {
+        return (this.data.length > 0) ? this.data[0] : undefined;
+    }
+
+    last(): T {
+        return (this.data.length > 0) ? this.data[this.data.length - 1] : undefined;
     }
 }

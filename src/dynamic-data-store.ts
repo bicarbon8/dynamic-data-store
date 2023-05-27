@@ -1,3 +1,5 @@
+import { DynamicDataStoreRecords } from "./dynamic-data-store-records";
+import { JsonHelper } from "./json-helper";
 import { ValueMatcher } from "./value-matcher";
 
 export type DynamicDataStoreOptions<T extends {}> = {
@@ -80,12 +82,7 @@ export class DynamicDataStore<T extends {}> {
     update(updates: Partial<T>, query?: Query<T>): number {
         let count = 0;
         if (updates) {
-            const shouldBeUpdatedArr = new Array<T>();
-            if (this.hasAllIndexProperties(updates)) {
-                shouldBeUpdatedArr.splice(0, 0, this.get(updates));
-            } else {
-                shouldBeUpdatedArr.splice(0, 0, ...this.select(query));
-            }
+            const shouldBeUpdatedArr: Array<T> = this._performQuery(query ?? updates);
             for (let toBeUpdated of shouldBeUpdatedArr) {
                 let key = this.getIndex(toBeUpdated);
                 if (key) {
@@ -109,29 +106,14 @@ export class DynamicDataStore<T extends {}> {
      * conforming to certain criteria
      * @returns an array of all matching records
      */
-    select(query?: Query<T>): Array<T> {
-        const results = new Array<T>();
-        if (query) {
-            const sArr = Array.from(this._store.values());
-            const queryKeys = Object.keys(query);
-            results.splice(0, 0, ...sArr.filter(r => {
-                for (let prop of queryKeys) {
-                    if (query[prop] instanceof ValueMatcher) {
-                        if (!query[prop].isMatch(r[prop])) {
-                            return false;
-                        }
-                    } else {
-                        if (query[prop] !== r[prop]) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }));
-        } else {
-            results.splice(0, 0, ...this._store.values());
-        }
-        return JSON.parse(JSON.stringify(results));
+    select(query?: Query<T>): DynamicDataStoreRecords<T> {
+        const records = this._performQuery(query);
+        return new DynamicDataStoreRecords(
+            ...JSON.parse(
+                JSON.stringify(records, JsonHelper.replacer), 
+                JsonHelper.reviver
+            )
+        );
     }
 
     /**
@@ -141,8 +123,8 @@ export class DynamicDataStore<T extends {}> {
      * @returns the number of records found that match the passed in `query` or
      * all records if no `query` is supplied
      */
-    count(query?: Query<T>): number {
-        const records = this.select(query);
+    size(query?: Query<T>): number {
+        const records = this._performQuery(query);
         return records.length;
     }
 
@@ -157,7 +139,7 @@ export class DynamicDataStore<T extends {}> {
      * if no matches found
      */
     delete(query: Query<T>): Array<T> {
-        const found = this.select(query);
+        const found = this._performQuery(query);
         for (let f of found) {
             let key = this.getIndex(f);
             if (key) {
@@ -179,17 +161,27 @@ export class DynamicDataStore<T extends {}> {
 
     /**
      * checks if the passed in object has all the properties currently used
-     * to generate an index key. NOTE: if no `indexKeys` were specified for
+     * to generate an index key and if those properties are set to values and 
+     * not to ValueMatcher's. NOTE: if no `indexKeys` were specified for
      * this `DynamicDataStore` instance then `true` will be returned as long
-     * as the passed in object is not `null` or `undefined`
+     * as the passed in object is not `null` or `undefined` and none of the
+     * properties are set to a {ValueMatcher}
      * @param record the object to check for properties used as index keys
      * @returns `true` if all the properties used as index keys have a value,
      * otherwise `false`
      */
-    hasAllIndexProperties(record: Partial<T>): boolean {
+    hasAllIndexProperties(record: Query<T>): boolean {
         let hasProps: boolean = true;
-        for (const key of this._indicies) {
-            if (record?.[key] == null) {
+        const keys = new Array<string | number | symbol>();
+        if (this._indicies.length > 0) {
+            keys.splice(0, 0, ...this._indicies);
+        } else {
+            if (record != null) {
+                keys.splice(0, 0, ...Object.keys(record));
+            }
+        }
+        for (const key of keys) {
+            if (record?.[key] == null || record[key] instanceof ValueMatcher) {
                 hasProps = false;
                 break;
             }
@@ -205,7 +197,7 @@ export class DynamicDataStore<T extends {}> {
      * converted into a `string` delimited by `propertyKeyDelimiter`
      * @returns the generated index key
      */
-    getIndex(record: Partial<T>): string {
+    getIndex(record: Query<T>): string {
         if (this.hasAllIndexProperties(record)) {
             const strVals = new Array<string>();
             if (this._indicies.length) {
@@ -240,5 +232,38 @@ export class DynamicDataStore<T extends {}> {
             throw new Error(`invalid index '${index}'`);
         }
         return parsed;
+    }
+
+    private _performQuery(query?: Query<T>): Array<T> {
+        const results = new Array<T>();
+        if (query) {
+            if (this.hasAllIndexProperties(query)) {
+                const key = this.getIndex(query);
+                const val = this._store.get(key);
+                if (val != null) {
+                    results.push(val);
+                }
+            } else {
+                const sArr = Array.from(this._store.values());
+                const queryKeys = Object.keys(query);
+                results.splice(0, 0, ...sArr.filter(r => {
+                    for (let prop of queryKeys) {
+                        if (query[prop] instanceof ValueMatcher) {
+                            if (!query[prop].isMatch(r[prop])) {
+                                return false;
+                            }
+                        } else {
+                            if (query[prop] !== r[prop]) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                }));
+            }
+        } else {
+            results.splice(0, 0, ...this._store.values());
+        }
+        return results;
     }
 }
