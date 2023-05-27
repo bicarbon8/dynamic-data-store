@@ -163,30 +163,21 @@ export class DynamicDataStore<T extends {}> {
      * checks if the passed in object has all the properties currently used
      * to generate an index key and if those properties are set to values and 
      * not to ValueMatcher's. NOTE: if no `indexKeys` were specified for
-     * this `DynamicDataStore` instance then `true` will be returned as long
-     * as the passed in object is not `null` or `undefined` and none of the
-     * properties are set to a {ValueMatcher}
+     * this `DynamicDataStore` instance then `false` will be returned
      * @param record the object to check for properties used as index keys
      * @returns `true` if all the properties used as index keys have a value,
      * otherwise `false`
      */
     hasAllIndexProperties(record: Query<T>): boolean {
-        let hasProps: boolean = true;
-        const keys = new Array<string | number | symbol>();
         if (this._indicies.length > 0) {
-            keys.splice(0, 0, ...this._indicies);
-        } else {
-            if (record != null) {
-                keys.splice(0, 0, ...Object.keys(record));
+            const keys = this._indicies;
+            for (const key of keys) {
+                if (record?.[key] == null || record[key] instanceof ValueMatcher) {
+                    return false;
+                }
             }
         }
-        for (const key of keys) {
-            if (record?.[key] == null || record[key] instanceof ValueMatcher) {
-                hasProps = false;
-                break;
-            }
-        }
-        return hasProps && record != null;
+        return false;
     }
 
     /**
@@ -200,16 +191,12 @@ export class DynamicDataStore<T extends {}> {
     getIndex(record: Query<T>): string {
         if (this.hasAllIndexProperties(record)) {
             const strVals = new Array<string>();
-            if (this._indicies.length) {
-                for (let key of this._indicies) {
-                    strVals.push(JSON.stringify(record[key]));
-                }
-            } else {
-                strVals.push(JSON.stringify(record));
+            for (let key of this._indicies) {
+                strVals.push(JSON.stringify(record[key], JsonHelper.replacer));
             }
             return strVals.join(this._delim);
         }
-        return undefined;
+        return JSON.stringify(record, JsonHelper.replacer);
     }
 
     /**

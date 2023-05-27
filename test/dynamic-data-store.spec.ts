@@ -19,10 +19,10 @@ describe('DynamicDataStore', () => {
 
         expect(dt.size()).withContext('number of records in the table').toBe(2);
         const actual = dt.select();
-        expect(actual[0].strKey).toEqual('foo');
-        expect(actual[0].boolKey).toBe(true);
-        expect(actual[1].strKey).toEqual('foo');
-        expect(actual[1].boolKey).toBe(false);
+        expect(actual.first().strKey).toEqual('foo');
+        expect(actual.first().boolKey).toBe(true);
+        expect(actual.data[1].strKey).toEqual('foo');
+        expect(actual.data[1].boolKey).toBe(false);
     })
 
     it('can add indexKeys via contructor options', () => {
