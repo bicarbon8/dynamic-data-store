@@ -1,5 +1,5 @@
 import { DynamicDataStore } from "../src";
-import { between, containing, matching } from "../src/value-matcher";
+import { between, containing, matching, startingWith } from "../src/value-matcher";
 
 type TestObj = {
     strKey?: string;
@@ -156,5 +156,26 @@ describe('DynamicDataStore', () => {
 
         expect(dt.indicies.length).toBe(2);
         expect(dt.indicies).toEqual(indexProps);
+    })
+
+    it('allows queries to search nested objects', () => {
+        const dt = new DynamicDataStore<TestObj>({
+            indicies: ['strKey', 'boolKey', 'numKey'],
+            records: [
+                {strKey: 'foo', boolKey: true, numKey: 1, objKey: {strKey: 'bar'}},
+                {strKey: 'foo', boolKey: false, numKey: 2, objKey: {strKey: 'baz'}},
+                {strKey: 'foo', boolKey: false, numKey: 1, objKey: {strKey: 'bar'}},
+                {strKey: 'foo', boolKey: true, numKey: 2, objKey: {strKey: 'baz'}},
+                {strKey: 'bar', boolKey: true, numKey: 1, objKey: {strKey: 'bar'}},
+                {strKey: 'bar', boolKey: false, numKey: 2, objKey: {strKey: 'baz'}},
+                {strKey: 'bar', boolKey: false, numKey: 1, objKey: {strKey: 'bar'}},
+                {strKey: 'bar', boolKey: true, numKey: 2, objKey: {strKey: 'baz'}}
+            ]
+        });
+
+        const results = dt.select({strKey: 'foo', objKey: {strKey: 'bar'}});
+        expect(results.data.length).toBe(2);
+        const valRes = dt.select({strKey: 'bar', objKey: {strKey: startingWith('ba')}});
+        expect(valRes.data.length).toBe(4);
     })
 })

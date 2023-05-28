@@ -233,25 +233,35 @@ export class DynamicDataStore<T extends {}> {
                 }
             } else {
                 const sArr = Array.from(this._store.values());
-                const queryKeys = Object.keys(query);
-                results.splice(0, 0, ...sArr.filter(r => {
-                    for (let prop of queryKeys) {
-                        if (query[prop] instanceof ValueMatcher) {
-                            if (!query[prop].isMatch(r[prop])) {
-                                return false;
-                            }
-                        } else {
-                            if (query[prop] !== r[prop]) {
-                                return false;
-                            }
-                        }
-                    }
-                    return true;
-                }));
+                results.splice(0, 0, ...sArr.filter(r => this._recordMatches(query, r)));
             }
         } else {
             results.splice(0, 0, ...this._store.values());
         }
         return results;
+    }
+
+    private _recordMatches(query: {}, record: {}): boolean {
+        const queryKeys = Object.keys(query);
+        for (let prop of queryKeys) {
+            if (query[prop] instanceof ValueMatcher) {
+                if (!query[prop].isMatch(record[prop])) {
+                    return false;
+                }
+            } else {
+                if (typeof query[prop] === 'object' && query[prop] !== null) {
+                    if (record[prop] == null) {
+                        return false;
+                    }
+                    const result = this._recordMatches(query[prop], record[prop]);
+                    if (result === false) {
+                        return false;
+                    }
+                } else if (query[prop] !== record[prop]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
