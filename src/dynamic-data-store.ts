@@ -176,6 +176,7 @@ export class DynamicDataStore<T extends {}> {
                     return false;
                 }
             }
+            return true;
         }
         return false;
     }
