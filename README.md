@@ -38,10 +38,10 @@ Reading records from the `DynamicDataStore` is done using the `select` function 
 const allActiveRecords = store.select({
     active: true
 }); // an array of 0 to many records
-const firstActiveRecordCreatedBeforeTimestamp = store.select({
+const record = store.select({
     active: true,
     created: lessThan(timestampMilliseconds)
-}).first(); // a single record or undefined if no matching records
+}).first; // a single record or undefined if no matching records
 ```
 Updating records is done using the `update` function which can be used to update a single record if your `updates` object contains values for the properties used as indicies:
 ```typescript
