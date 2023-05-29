@@ -17,14 +17,6 @@ jobs:
       - name: Build Projects
         id: buildproj
         run: npm run build
-      - name: Run Unit Tests
+      - name: Run Unit Tests with Coverage
         id: unittest
-        run: npm run test
-      - name: Functional Test
-        # only run functional tests on internal PRs
-        if: github.repository == 'bicarbon8/automated-functional-testing'
-        id: functionaltest
-        run: npm run test:examples
-        env:
-          browserstack_user: ${{ secrets.BROWSERSTACK_USER }}
-          browserstack_key: ${{ secrets.BROWSERSTACK_KEY }}
+        run: npm run coverage

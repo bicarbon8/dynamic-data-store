@@ -1,4 +1,4 @@
-import { between, containing, endingWith, greaterThan, lessThan, matching, startingWith } from "../src/value-matcher";
+import { between, containing, endingWith, greaterThan, havingValue, lessThan, matching, not, startingWith } from "../src/value-matcher";
 
 describe('ValueMatcher', () => {
     describe('Between', () => {
@@ -176,6 +176,36 @@ describe('ValueMatcher', () => {
         testData.forEach(d => {
             it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
                 expect(endingWith(d.end).isMatch(d.actual)).withContext(d.ctx).toBe(d.expected);
+            })
+        })
+    })
+
+    describe('HavingValue', () => {
+        const testData = [
+            {actual: null, expected: false, ctx: 'null actual results in false'},
+            {actual: undefined, expected: false, ctx: 'undefined actual results in false'},
+            {actual: false, expected: true, ctx: 'false actual results in true'},
+            {actual: 0, expected: true, ctx: '0 actual results in true'},
+            {actual: '', expected: true, ctx: 'empty string actual results in true'},
+            {actual: {}, expected: true, ctx: 'empty object actual results in true'},
+            {actual: () => null, expected: true, ctx: 'function actual returning null results in true'}
+        ];
+        testData.forEach(d => {
+            it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
+                expect(havingValue().isMatch(d.actual)).withContext(d.ctx).toBe(d.expected);
+            })
+        })
+    })
+
+    describe('Not', () => {
+        const testData = [
+            {matcher: between(3, 5), actual: 7, expected: true, ctx: 'between 3 and 5 with 7 actual results in true'},
+            {matcher: containing(42), actual: [12, 24], expected: true, ctx: 'containing 42 with [12, 24] actual results in true'},
+            {matcher: havingValue(), actual: null, expected: true, ctx: 'havingValue with null actual results in true'}
+        ];
+        testData.forEach(d => {
+            it(`returns the correct result for: ${JSON.stringify(d)}`, () => {
+                expect(not(d.matcher).isMatch(d.actual)).withContext(d.ctx).toBe(d.expected);
             })
         })
     })

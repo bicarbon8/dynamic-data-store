@@ -332,3 +332,31 @@ class EndingWith extends ValueMatcher {
  * @returns `true` if the `actual` value ends with `end`; otherwise `false`
  */
 export const endingWith = (end?: string | number | boolean) => new EndingWith(end);
+
+class HavingValue implements ValueMatcher {
+    isMatch(actual?: unknown): boolean {
+        return actual != null;
+    }
+}
+/**
+ * verifies that the `actual` value is set to something other than `null` or
+ * `undefined`
+ * @returns `true` if the `actual` value is not `null` or `undefined`
+ */
+export const havingValue = () => new HavingValue();
+
+class Not implements ValueMatcher {
+    public readonly notExpected: ValueMatcher;
+    constructor(notExpected: ValueMatcher) {
+        this.notExpected = notExpected;
+    }
+    isMatch(actual?: unknown): boolean {
+        return !this.notExpected.isMatch(actual);
+    }
+}
+/**
+ * inverts the result of any {ValueMatcher} passed to it
+ * @param notExpected a {ValueMatcher} to be negated
+ * @returns `true` if the passed in `notExpected` returns `false`; otherwise `false`
+ */
+export const not = (notExpected: ValueMatcher) => new Not(notExpected);
