@@ -1,8 +1,8 @@
 {
   "name": "dynamic-data-store",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "a no-sql data storage solution supporting dynamic primary key designation and hashmap storage as well as partial object based query filters",
-  "main": "dist/src/index.js",
+  "main": "src/index.js",
   "scripts": {
     "build": "tsc",
     "test": "ts-node ./node_modules/jasmine/bin/jasmine --config=./jasmine.json",
