@@ -21,8 +21,8 @@ describe('DynamicDataStore', () => {
         const actual = dt.select();
         expect(actual.first().strKey).toEqual('foo');
         expect(actual.first().boolKey).toBe(true);
-        expect(actual.data[1].strKey).toEqual('foo');
-        expect(actual.data[1].boolKey).toBe(false);
+        expect(actual[1].strKey).toEqual('foo');
+        expect(actual[1].boolKey).toBe(false);
     })
 
     it('can add indexKeys via contructor options', () => {
@@ -78,7 +78,7 @@ describe('DynamicDataStore', () => {
         const updated = dt.select({strKey: 'foo', numKey: 2}).first();
         expect(updated.boolKey).toBe(false);
         const unchanged = dt.select({boolKey: true});
-        expect(unchanged.data.length).toBe(3);
+        expect(unchanged.length).toBe(3);
     })
 
     it('can update multiple records using the update function', () => {
@@ -97,8 +97,8 @@ describe('DynamicDataStore', () => {
         const unchanged = dt.select({strKey: 'foo', numKey: 4}).first();
         expect(unchanged.boolKey).toBe(false);
         const updated = dt.select({numKey: between(2, 3)});
-        expect(updated.data.length).toBe(2);
-        expect(updated.data.every(c => c.boolKey === true)).toBe(true);
+        expect(updated.length).toBe(2);
+        expect(updated.every(c => c.boolKey === true)).toBe(true);
     })
 
     it('can remove records by query data', () => {
@@ -174,8 +174,8 @@ describe('DynamicDataStore', () => {
         });
 
         const results = dt.select({strKey: 'foo', objKey: {strKey: 'bar'}});
-        expect(results.data.length).toBe(2);
+        expect(results.length).toBe(2);
         const valRes = dt.select({strKey: 'bar', objKey: {strKey: startingWith('ba')}});
-        expect(valRes.data.length).toBe(4);
+        expect(valRes.length).toBe(4);
     })
 })

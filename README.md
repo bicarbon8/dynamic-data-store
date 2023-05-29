@@ -33,25 +33,15 @@ const unsuccessful = store.add({
     active: true
 }); // record not added due to unique index violation
 ```
-Reading records from the `DynamicDataStore` is done using the `select` or `selectFirst` function when you want records matching certain constraints:
+Reading records from the `DynamicDataStore` is done using the `select` function when you want records matching certain constraints:
 ```typescript
 const allActiveRecords = store.select({
     active: true
 }); // an array of 0 to many records
-const firstActiveRecordCreatedBeforeTimestamp = store.selectFirst({
+const firstActiveRecordCreatedBeforeTimestamp = store.select({
     active: true,
     created: lessThan(timestampMilliseconds)
-}); // a single record or undefined if no matching records
-```
-or using the `get` function if you know the values for the record's indicies:
-```typescript
-const record = store.get({
-    username: 'secretagent1',
-    active: true
-}); // returns {username: 'secretagent1', firstname: 'John', created: 1234567890, lastUpdated: 1234567890, active: true}
-const undef = store.get({
-    firstname: 'Jonh'
-}); // returns undefined
+}).first(); // a single record or undefined if no matching records
 ```
 Updating records is done using the `update` function which can be used to update a single record if your `updates` object contains values for the properties used as indicies:
 ```typescript
@@ -85,6 +75,7 @@ const deletedRecords = store.delete({
     lastActive: lessThan(timestampMilliseconds)
 }); // deletedRecords contains an array of all deleted records
 ```
+or by using the `clear` function to remove all records
 
 ### 2. Client-Server user management
 assuming you have a chat application where users are **NOT** required to log-in, but instead use a machine-generated fingerprint and a user-generated name to uniquely identify themselves and they need to be able to reconnect to a socket if there is a temporary disconnect as well as ensure no other users are using the same username at the same time...
@@ -141,7 +132,7 @@ const messages = new Array<UserMessage>();
 io.on('connection', (socket) => {
     socket.on('register', (user: Partial<User>) => {
         if (isValid(user)) { // user.name follows guidelines
-            if (store.count({name: user.name}) > 0) {
+            if (store.size({name: user.name}) > 0) {
                 socket.emit('nameRejected', user.name);
             } else {
                 const added = store.add({
@@ -160,8 +151,8 @@ io.on('connection', (socket) => {
     }).on('reconnect', (user: Partial<User>) => {
         if (user.fingerprint && user.name) {
             const existing = store.select(user);
-            if (existing?.length) {
-                existing[0].socketId = socket.id;
+            if (existing.first()) {
+                existing.first().socketId = socket.id;
             }
         }
     }).on('sendMessage', (message: string) => {

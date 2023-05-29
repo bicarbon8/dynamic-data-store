@@ -109,6 +109,7 @@ export class DynamicDataStore<T extends {}> {
     select(query?: Query<T>): DynamicDataStoreRecords<T> {
         const records = this._performQuery(query);
         return new DynamicDataStoreRecords(
+            this.indicies,
             ...JSON.parse(
                 JSON.stringify(records, JsonHelper.replacer), 
                 JsonHelper.reviver

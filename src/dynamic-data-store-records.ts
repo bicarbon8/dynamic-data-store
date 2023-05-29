@@ -1,17 +1,19 @@
+import { DynamicDataStore, QueryValue } from "./dynamic-data-store";
 import { JsonHelper } from "./json-helper";
 
 export type Order = 'asc' | 'desc';
 
-export class DynamicDataStoreRecords<T extends {}> {
-    public readonly data: Array<T>;
+export class DynamicDataStoreRecords<T extends {}> extends Array<T> {
     private readonly _highValueCharacters = '\u9999\u9999\u9999\u9999\u9999\u9999';
+    private readonly _indicies: Array<keyof T>;
 
-    constructor(...inputs: Array<T>) {
-        this.data = inputs ?? new Array<T>();
+    constructor(indicies: Array<keyof T>, ...inputs: Array<T>) {
+        super(...inputs);
+        this._indicies = indicies;
     }
-
+    
     orderBy(order: Order = 'asc', ...keys: Array<keyof T>): this {
-        this.data.sort((a: T, b: T) => {
+        this.sort((a: T, b: T) => {
             let aStr: string = '';
             let bStr: string = '';
             if (keys?.length > 0) {
@@ -45,20 +47,27 @@ export class DynamicDataStoreRecords<T extends {}> {
     count(val: number | string): Array<T> {
         if (typeof val === 'number') {
             if (val >= 0) {
-                return this.data.slice(0, val);
+                return this.slice(0, val);
             }
         }
         if (val === '*') {
-            return this.data;
+            return this;
         }
         return undefined;
     }
 
     first(): T {
-        return (this.data.length > 0) ? this.data[0] : undefined;
+        return (this.length > 0) ? this[0] : undefined;
     }
 
     last(): T {
-        return (this.data.length > 0) ? this.data[this.data.length - 1] : undefined;
+        return (this.length > 0) ? this[this.length - 1] : undefined;
+    }
+
+    select(query?: Partial<Record<keyof T, QueryValue>>): DynamicDataStoreRecords<T> {
+        return new DynamicDataStore({
+            indicies: this._indicies,
+            records: this
+        }).select(query);
     }
 }
