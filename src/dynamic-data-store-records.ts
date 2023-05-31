@@ -1,8 +1,15 @@
-import { DynamicDataStore, QueryValue } from "./dynamic-data-store";
+import { DynamicDataStore } from "./dynamic-data-store";
 import { JsonHelper } from "./json-helper";
+import { Query } from "./query";
 
 export type Order = 'asc' | 'desc';
 
+/**
+ * a `DynamicDataStore` results class used to provide record sorting and
+ * filtering. calls to `DynamicDataStore.select(query?: Query<T>)` will
+ * return an instance of this class or it can be used on it's own to provide
+ * an alternative to the `Array.sort` and `Array.filter` functions
+ */
 export class DynamicDataStoreRecords<T extends {}> extends Array<T> {
     private readonly _highValueCharacters = '\u9999\u9999\u9999\u9999\u9999\u9999';
     private readonly _indicies: Array<keyof T>;
@@ -72,7 +79,7 @@ export class DynamicDataStoreRecords<T extends {}> extends Array<T> {
      * conforming to certain criteria
      * @returns an array of all matching records
      */
-    select(query?: Partial<Record<keyof T, QueryValue>>): DynamicDataStoreRecords<T> {
+    select(query?: Query<T>): DynamicDataStoreRecords<T> {
         return new DynamicDataStore({
             indicies: this._indicies,
             records: this

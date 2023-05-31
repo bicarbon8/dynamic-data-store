@@ -8,8 +8,25 @@ a no-sql data storage solution supporting dynamic primary key designation and ha
 1. partial record lookup and hydration between client-server applications
 2. on-demand no-sql, in-memory data storage where creating a schema is too much overhead
 3. data storage with primary keys where a single property is not sufficient to create a unique primary key
+4. flexible object filtering and ordering without risk of accidental modification to base records
 
-## Examples
+## Query
+a module providing a `filterBy<T extends {}>(query: Query<T>, ...records: Array<T>): Array<T>` function used to filter the supplied records by the supplied query where the query is a JSON object where each property key exists in type `T` and each property value is either the expected value in all returned records or a `ValueMatcher` used to conditionally match the records based on some conditions
+
+## ValueMatcher
+a class accepting some expected value(s) which is then compared to the actual value to determine if a data record matches the query. this base class can either be extended from to create your own value matchers or you can use one of the pre-made value matchers below:
+- `between` - a `ValueMatcher` expecting a `min` and `max` number which is used to compare to the actual value
+- `greaterThan` - a `ValueMatcher` expecting a `min` number which is used to compare to the actual value
+- `lessThan` - a `ValueMatcher` expecting a `max` number which is used to compare to the actual value
+- `containing` - a `ValueMatcher` expecting the actual value to contain the expected either as a substring or array / map / set entry
+- `matching` - a `ValueMatcher` expecting a `RegExp` which is used to compare to the actual value
+- `startingWith` - a `ValueMatcher` expecting the actual value to start with the expected either as a substring or array / map / set entry
+- `endingWith` - a `ValueMatcher` expecting the actual value to end with the expected either as a substring or array / map / set entry
+- `havingValue` - a `ValueMatcher` expecting the actual value to not be null or undefined
+- `not` - a `ValueMatcher` that will negate the result of any other `ValueMatcher` passed to it
+
+## DynamicDataStore Usage
+> NOTE: when using a `DynamicDataStore` it is assumed that the data being stored is **NOT** a class or any object containing functions and instead you are only storing a JSON object (the `DynamicDataStore` serialiser also supports Map and Set properties on your data objects). if you require filtering of more complex data records like classes then it is recommended you use the `Query.filterBy<T extends {}>(query: Query<T>, ...records: Array<T>): Array<T>` function which performs the same filtering capabilities as the `DynamicDataStore.select(query?: Query<T>): DynamicDataStoreRecords<T>` function, but without acting as the storage mechanism and returning the actual records instead of clones. if you insist on using a `DynamicDataStore` instance to store class objects, you can use the `DynamicDataStore._get(query?: Query<T>): DynamicDataStoreRecords<T>` function, but the records returned are actual references and **NOT** clones so **USE AT YOUR OWN RISK**
 
 ### 1. CRUD operations
 the following examples assume a `DynamicDataStore` named `store` already exists with the following configuration:
@@ -34,6 +51,7 @@ const unsuccessful = store.add({
 }); // record not added due to unique index violation
 ```
 Reading records from the `DynamicDataStore` is done using the `select` function when you want records matching certain constraints:
+> NOTE: records returned by `select` are clones and not the actual data so modifications to any properties will not affect the data records stored in your `DynamicDataStore`
 ```typescript
 const allActiveRecords = store.select({
     active: true
@@ -76,6 +94,7 @@ const deletedRecords = store.delete({
 }); // deletedRecords contains an array of all deleted records
 ```
 or by using the `clear` function to remove all records
+> NOTE: records returned by calling `delete` or `clear` are the actual data record instances and **NOT** clones
 
 ### 2. Client-Server user management
 assuming you have a chat application where users are **NOT** required to log-in, but instead use a machine-generated fingerprint and a user-generated name to uniquely identify themselves and they need to be able to reconnect to a socket if there is a temporary disconnect as well as ensure no other users are using the same username at the same time...

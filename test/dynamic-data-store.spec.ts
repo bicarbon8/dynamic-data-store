@@ -1,5 +1,5 @@
 import { DynamicDataStore } from "../src";
-import { between, containing, matching, startingWith } from "../src/value-matcher";
+import { between, matching, startingWith } from "../src/value-matcher";
 
 type TestObj = {
     strKey?: string;

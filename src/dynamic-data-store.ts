@@ -1,5 +1,6 @@
 import { DynamicDataStoreRecords } from "./dynamic-data-store-records";
 import { JsonHelper } from "./json-helper";
+import { Query } from "./query";
 import { ValueMatcher } from "./value-matcher";
 
 export type DynamicDataStoreOptions<T extends {}> = {
@@ -20,9 +21,13 @@ export type DynamicDataStoreOptions<T extends {}> = {
     delimiter?: string;
 };
 
-export type QueryValue = ValueMatcher | number | boolean | string | {};
-export type Query<T> = Partial<Record<keyof T, QueryValue>>;
-
+/**
+ * object storage and filtering class that enforces unique-ness by way of a supplied
+ * array of keys used to indicate which properties of the data record objects form
+ * a combined primary key constraint. using the `DynamicDataStore` is a bit like using
+ * a `Set`, but where you have more control over the unique-ness constraint and with
+ * built-in filtering and sorting capabilities
+ */
 export class DynamicDataStore<T extends {}> {
     private readonly _indicies: Array<keyof T>;
     private readonly _store = new Map<string, T>();
@@ -255,36 +260,11 @@ export class DynamicDataStore<T extends {}> {
                     results.push(val);
                 }
             } else {
-                const sArr = Array.from(this._store.values());
-                results.splice(0, 0, ...sArr.filter(r => this._recordMatches(query, r)));
+                results.splice(0, 0, ...Query.filterBy(query, ...this._store.values()));
             }
         } else {
             results.splice(0, 0, ...this._store.values());
         }
         return results;
-    }
-
-    private _recordMatches(query: {}, record: {}): boolean {
-        const queryKeys = Object.keys(query);
-        for (let prop of queryKeys) {
-            if (query[prop] instanceof ValueMatcher) {
-                if (!query[prop].isMatch(record[prop])) {
-                    return false;
-                }
-            } else {
-                if (typeof query[prop] === 'object' && query[prop] !== null) {
-                    if (record[prop] == null) {
-                        return false;
-                    }
-                    const result = this._recordMatches(query[prop], record[prop]);
-                    if (result === false) {
-                        return false;
-                    }
-                } else if (query[prop] !== record[prop]) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 }

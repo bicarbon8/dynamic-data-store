@@ -7,7 +7,16 @@ export type SetJson = {
     value: Array<any>;
 };
 
+/**
+ * module used by `DynamicDataStore` to allow JSON serialisation and 
+ * deserialisation of `Map` and `Set` objects which typically are not
+ * supported by `JSON.stringify` and `JSON.parse` functions
+ */
 export module JsonHelper {
+    /**
+     * a JSON.stringify replacer function that can serialise `Map` and `Set`
+     * objects such that they can be deserialised using the `JsonHelper.reviver`
+     */
     export const replacer = (key: unknown, val: unknown): unknown => {
         if (val instanceof Map) {
             return {
@@ -23,6 +32,10 @@ export module JsonHelper {
         }
         return val;
     }
+    /**
+     * a JSON.parse reviver function that can deserialise `Map` and `Set`
+     * objects that were serialised using the `JsonHelper.replacer`
+     */
     export const reviver = (key: unknown, val: unknown): any => {
         if (typeof val === 'object' && val !== null) {
             if ((val as MapJson)?.dataType === 'Map') {
