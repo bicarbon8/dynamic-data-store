@@ -99,21 +99,43 @@ export class DynamicDataStore<T extends {}> {
 
     /**
      * finds all records in the `DynamicDataStore` whose values match those
-     * passed in the supplied record. NOTE: any properties not specified will
-     * be ignored
+     * passed in the supplied `query` record. 
+     * 
+     * **NOTE**: returned records are **NOT** the actual stored objects, but
+     * are a clone so modifications to them will have **NO** effect on the 
+     * stored records. to update the stored records call the `update` function
      * @param query a record object where any keys of type `T` are set to either 
      * the exact value expected or a `ValueMatcher` used to identify values
      * conforming to certain criteria
-     * @returns an array of all matching records
+     * @returns an array of all matching records as a `DynamicDataStoreRecords` object
      */
     select(query?: Query<T>): DynamicDataStoreRecords<T> {
         const records = this._performQuery(query);
         return new DynamicDataStoreRecords(
-            this.indicies,
+            [...this.indicies],
             ...JSON.parse(
                 JSON.stringify(records, JsonHelper.replacer), 
                 JsonHelper.reviver
             )
+        );
+    }
+
+    /**
+     * finds all records in the `DynamicDataStore` whose values match those
+     * passed in the supplied `query` record.
+     * 
+     * **DANGER**: returned records **ARE** direct references to the stored objects
+     * so modifications to them will affect the stored values, but not their index
+     * keys used to ensure their uniqueness constraints. **USE AT YOUR OWN RISK**
+     * @param query a record object where any keys of type `T` are set to either
+     * the exact value expected or a `ValueMatcher` used to identify values
+     * conforming to certain criteria
+     * @returns an array of all matching records as a `DynamicDataStoreRecords` object
+     */
+    _get(query?: Query<T>): DynamicDataStoreRecords<T> {
+        return new DynamicDataStoreRecords(
+            [...this.indicies],
+            ...this._performQuery(query)
         );
     }
 

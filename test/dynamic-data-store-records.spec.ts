@@ -83,6 +83,25 @@ describe('DynamicDataStoreRecords', () => {
         expect(records.last.num).toBe(234);
     })
 
+    it('places null properties and records at then end when ordering ascending', () => {
+        const records = new DynamicDataStoreRecords([],
+            {name: 'def', num: 123},
+            {num: 234},
+            {name: 'bcd', num: 234},
+            {name: 'bcd', num: 234},
+            {name: 'cde', num: 123},
+            null,
+            {name: 'abc', num: 123}
+        );
+        records.orderBy('asc');
+
+        expect(records.first.name).toEqual('abc');
+        expect(records.first.num).toBe(123);
+        expect(records.last).toBeNull();
+        expect(records[5].name).toBeUndefined();
+        expect(records[5].num).toBe(234);
+    })
+
     it('can can be queried to create subset of results', () => {
         const records = new DynamicDataStoreRecords([],
             {name: 'def', num: 123},
@@ -96,5 +115,17 @@ describe('DynamicDataStoreRecords', () => {
         expect(records.length).toBe(3);
         expect(records.select({name: 'cde'}).length).toBe(1);
         expect(records.select({name: 'bcd'}).length).toBe(2);
+    })
+
+    it('returns undefined for first if contains no records', () => {
+        const records = new DynamicDataStoreRecords([]);
+
+        expect(records.first).toBeUndefined();
+    })
+
+    it('returns undefined for last if contains no records', () => {
+        const records = new DynamicDataStoreRecords([]);
+
+        expect(records.last).toBeUndefined();
     })
 })

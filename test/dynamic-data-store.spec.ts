@@ -62,6 +62,30 @@ describe('DynamicDataStore', () => {
         expect(actual.numKey).toBe(222);
     })
 
+    it('can provide the source records instead of clones', () => {
+        const store = new DynamicDataStore<TestObj>({
+            indicies: ['strKey'],
+            records: [
+                { strKey: 'foo', boolKey: true, numKey: 222 },
+                { strKey: 'bar', boolKey: true, numKey: 111 }
+            ]
+        });
+        const record = store._get({strKey: 'foo'}).first;
+        record.strKey = 'bar'; // bypasses unique index constraint
+        record.boolKey = false;
+        record.numKey = 333;
+
+        const actual = store.select({strKey: 'foo'}).first;
+        expect(actual.strKey).toEqual('bar');
+        expect(actual.boolKey).toBe(false);
+        expect(actual.numKey).toBe(333);
+
+        const actual2 = store.select({strKey: 'bar'}).first;
+        expect(actual2.strKey).toEqual('bar');
+        expect(actual2.boolKey).toBe(true);
+        expect(actual2.numKey).toBe(111);
+    })
+
     it('can update record using the update function', () => {
         const store = new DynamicDataStore<TestObj>({
             indicies: ['strKey', 'numKey'],
